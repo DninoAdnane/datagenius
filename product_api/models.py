@@ -1,5 +1,5 @@
 from django.db import models
-from enumModels import Rayon, TypeRemise
+from product_api.enumModels import Rayon, TypeRemise
 
 # Create your models here.
 
@@ -15,4 +15,4 @@ class Product(models.Model):
     name = models.CharField(max_length=30)
     prix = models.FloatField
     rayon = models.CharField(max_length=20, choices=Rayon.choices, default=Rayon.ALIMENTAIRE)
-    remise = models.ForeignKey(Remise, related_name="remises", on_delete=models.CASCADE)
+    remise = models.ForeignKey(Remise, related_name="remises", on_delete=models.CASCADE, blank=True, null=True)

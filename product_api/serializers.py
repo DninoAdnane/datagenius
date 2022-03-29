@@ -1,13 +1,7 @@
 from rest_framework import serializers
+from simplejson import OrderedDict
 from enumModels import Rayon, TypeRemise
 from models import Product
-
-
-class RemiseSerializer(serializers.ModelSerializer):
-    typeRemise = serializers.CharField(max_length=10, choices=TypeRemise.choices, default=TypeRemise.OFFRE)
-    nbAchete = serializers.IntegerField(blank=True, null=True)
-    nbOffer = serializers.IntegerField(blank=True, null= True)
-    tauxRed = serializers.IntegerField(blank=True, null=True)
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -19,3 +13,7 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = "__al__"
+
+    def to_representation(self, instance):
+        result = super(ProductSerializer, self).to_representation(instance)
+        return OrderedDict([(key, result[key]) for key in result if result[key] is not None])
