@@ -1,19 +1,33 @@
 from rest_framework import serializers
 from simplejson import OrderedDict
-from enumModels import Rayon, TypeRemise
-from models import Product
+from product_api.enumModels import Rayon, TypeRemise
+from product_api.models import Product, Remise
+
+
+class RemiseSerializer(serializers.ModelSerializer):
+    remise = serializers.CharField(source = "typeRemise", allow_null = True)
+    acheter = serializers.IntegerField(source = "nbAchete", allow_null = True)
+    offerts = serializers.IntegerField(source = "nbOffer", allow_null = True)
+    reduction = serializers.IntegerField(source = "tauxRed", allow_null = True)
+
+    class Meta:
+        model = Remise
+        fields = ('remise','acheter','offerts','reduction')
+    
+    def to_representation(self, instance):
+        datas = super().to_representation(instance)
+        return  OrderedDict([(key, datas[key]) for key in datas if datas[key] is not None])
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    remise = serializers.CharField(source = "remise.typeRemise")
-    acheter = serializers.IntegerField(source = "remise.nbAcheter")
-    offerts = serializers.IntegerField(source = "remise.nbOffer")
-    reduction = serializers.IntegerField(source = "remise.tauxRed")
+    
+    remises = RemiseSerializer(many=True, read_only = True)
     
     class Meta:
         model = Product
-        fields = "__al__"
+        fields = ('name', 'prix' , 'rayon', 'remises')
 
     def to_representation(self, instance):
-        result = super(ProductSerializer, self).to_representation(instance)
-        return OrderedDict([(key, result[key]) for key in result if result[key] is not None])
+        datas = super().to_representation(instance)
+        return datas
+
