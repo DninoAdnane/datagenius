@@ -5,5 +5,5 @@ urlpatterns = [
     path('product/', product_list),
     path('product_select/<str:name>/', product_select),
     path('product_rayon/<str:rayon>/', product_rayon),
-    path('product_prix', product_prix)
+    path('product_prix/', product_prix)
 ]
