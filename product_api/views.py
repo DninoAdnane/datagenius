@@ -1,6 +1,4 @@
-from this import d
 from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse
 from rest_framework.parsers import JSONParser
 from product_api.models import Product
 from product_api.serializers import ProductSerializer
@@ -53,7 +51,7 @@ def product_prix(request): # renvoie les produits appartenant à l'intervall de 
     min = request.data.get('min')
     max = request.data.get('max')
     if min == None or max == None:
-        return Response("request fields error...", status=status.HTTP_400_BAD_REQUEST)
+        return Response({"message":"request fields error...", "data": []}, status=status.HTTP_400_BAD_REQUEST)
     product = Product.objects.filter(prix__gte = min, prix__lte = max).order_by('prix')
     if request.method == 'POST':
         productSerializer =  ProductSerializer(product, many = True)
