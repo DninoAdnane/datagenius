@@ -1,6 +1,8 @@
 from django.db import models
 
-class TypeRemise(models.TextChoices):
+#Le fichier suivant contient les choix d'énumération qu'on peut avoir pour le model Product et Remise
+
+class TypeRemise(models.TextChoices): #Remise disponibles
         OFFRE = 'Offre'
         REDUCTION = 'Reduction'
 
