@@ -1,12 +1,13 @@
 from django.shortcuts import render
 from rest_framework.parsers import JSONParser
-from cart_api.models import ShoppingCart, User, ProductCart
+from cart_api.models import ShoppingCart, User, ProductCart, Commonde
 from product_api.models import Product, Remise
 from product_api.enumModels import TypeRemise
 from cart_api.serializers import ShoppingCartSerializer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from datetime import datetime, timezone
 
 # Create your views here.
 
@@ -56,10 +57,34 @@ def add_product_to_chart(request):
         return Response({"message" :"Product added successfully", "data": []}, status = status.HTTP_202_ACCEPTED)
         
 
-# @api_view(['POST'])
-# def validate_cart(request):
-#     if request.method == 'POST':
-#         usr_code = request.data.get('user')
-#         if usr_code is None:
-#             return Response({"message":"request fields error...", "data": []}, status=status.HTTP_400_BAD_REQUEST)
+@api_view(['POST'])
+def validate_cart(request):
+    if request.method == 'POST':
+        usr_code = request.data.get('user')
+        if usr_code is None:
+            return Response({"message":"request fields error...", "data": []}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+           user = User.objects.get(code = usr_code) 
+        except Product.DoesNotExist:
+            return Response({"message":"Please create an account first...", "data": []}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            shoppingCart =  ShoppingCart.objects.get(user = user, validated = False) # Validated == False veut dire qu'il ya un shopping cart current, et que l'utilisateur n'a pas encore annuler ou passer la commande
+        except ShoppingCart.DoesNotExist:
+            return Response({"message":"No current shopping cart...", "data": []}, status=status.HTTP_404_NOT_FOUND)
+        
+        try: # Permet de vérifier si l'utilisateur avait déjà effectué une commende dans les 60 secondes précédentes
+            command = Commonde.objects.filter(user = user).latest('date')
+            difference = datetime.now(timezone.utc) - command.date
+            if (difference.seconds < 60): 
+                return Response({"message":"Action not allowed, please wait one minute after your last command...", "data": []}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        except Commonde.DoesNotExist:
+            pass
+
+        shoppingCart.validated = True
+        command = Commonde(user = user, cart = ShoppingCart)
+        command.save()
+        shoppingCart.save()
+        return Response({"message" :"Order placed successfully...", "data": []}, status = status.HTTP_202_ACCEPTED)
         
