@@ -38,7 +38,7 @@ def product_select(request, name): #revoie le produit avec le nom 'name', sinon 
 @api_view(['GET'])
 def product_rayon(request, rayon): #renvoie les produits appartement au rayon 'rayon' ordonnées par nom du produit, sinon renvoie message d'erreur
     try:
-        product = Product.objects.get(rayon = rayon)
+        product = Product.objects.filter(rayon = rayon)
     except Product.DoesNotExist:
         return Response({"message":"No products available in this current rayon...", "data": []}, status = status.HTTP_404_NOT_FOUND)
     
