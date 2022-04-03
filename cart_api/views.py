@@ -1,19 +1,25 @@
+import django
 from django.shortcuts import render
 from rest_framework.parsers import JSONParser
 from cart_api.models import ShoppingCart, User, ProductCart, Commonde
 from product_api.models import Product, Remise
 from product_api.enumModels import TypeRemise
 from cart_api.serializers import ShoppingCartSerializer
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 from datetime import datetime, timezone
 
 # Create your views here.
 
+
 @api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def add_product_to_chart(request):
-    if request.method == 'POST':
+    
         usr_code = request.data.get('user')
         product_name = request.data.get('name')
         quantity = request.data.get('count')
@@ -40,6 +46,7 @@ def add_product_to_chart(request):
         
         remises = Remise.objects.filter(product=product) # les remise associés au produit
         totalPrix = product.prix * quantity # cout totale
+        prixRemise = 0
         for remise in remises:
             if remise.typeRemise == TypeRemise.OFFRE and quantity >= remise.nbAchete: # On offre au client un nombre de produit si il ya l'offre et si il a pri le bon nombre de produit
                 if product.quantite < remise.nbOffer:
@@ -49,10 +56,10 @@ def add_product_to_chart(request):
                     product.quantite = product.quantite - remise.nbOffer
                     quantity = quantity + remise.nbOffer
             elif remise.typeRemise == TypeRemise.REDUCTION: # On applique une réduction du prix
-                remisePrix = (totalPrix * remise.tauxRed)/100
+                prixRemise = (totalPrix * remise.tauxRed)/100
         product.save()
         shoppingCart.save() #containdra les produits acheté par l'utilisateur
-        productCart = ProductCart(product = product, quantity = quantity, prix = totalPrix, remisePrix = remisePrix, finalPrix = (totalPrix-remisePrix), cart = shoppingCart) # ajout du produit
+        productCart = ProductCart(product = product, quantity = quantity, prix = totalPrix, remisePrix = prixRemise, finalPrix = (totalPrix-prixRemise), cart = shoppingCart) # ajout du produit
         productCart.save()
         return Response({"message" :"Product added successfully", "data": []}, status = status.HTTP_202_ACCEPTED)
         
@@ -66,7 +73,7 @@ def validate_cart(request):
 
         try:
            user = User.objects.get(code = usr_code) 
-        except Product.DoesNotExist:
+        except User.DoesNotExist:
             return Response({"message":"Please create an account first...", "data": []}, status=status.HTTP_404_NOT_FOUND)
         
         try:
@@ -81,10 +88,32 @@ def validate_cart(request):
                 return Response({"message":"Action not allowed, please wait one minute after your last command...", "data": []}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         except Commonde.DoesNotExist:
             pass
+        
+        prodCarts = ProductCart.objects.filter(cart = shoppingCart)
+        finalPrice = 0
+        for prodCart in prodCarts:
+            finalPrice = finalPrice + prodCart.finalPrix
+        serialize = ShoppingCartSerializer(shoppingCart)       
 
         shoppingCart.validated = True
-        command = Commonde(user = user, cart = ShoppingCart)
+        command = Commonde(user = user, cart = shoppingCart)
         command.save()
         shoppingCart.save()
-        return Response({"message" :"Order placed successfully...", "data": []}, status = status.HTTP_202_ACCEPTED)
+        return Response({"message" :"Order placed successfully...", "data": serialize.data, "prix_finale" : finalPrice}, status = status.HTTP_202_ACCEPTED)
+
+
+# @api_view(['GET'])
+# def shopping_cart(request):
+#     if request.method == 'GET':
+#         try:
+#             user = User.objects.get(prenom = "Adnane")
+#         except User.DoesNotExist:
+#             return Response("User not found")
+#         shopCart = ShoppingCart.objects.get(user = user, validated = False)
+#         prodCarts = ProductCart.objects.filter(cart = shopCart)
+#         finalPrice = 0
+#         for prodCart in prodCarts:
+#             finalPrice = finalPrice + prodCart.finalPrix
+#         serialize = ShoppingCartSerializer(shopCart)
+#         return Response({"data": serialize.data, "prix_finale" : finalPrice}, status=status.HTTP_200_OK)
         
